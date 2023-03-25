@@ -1,4 +1,4 @@
-FROM golang:1.17-alpine3.14
+FROM golang:latest
 
 # Set the working directory
 WORKDIR /app
@@ -21,7 +21,6 @@ RUN go build -o main .
 ENV CONFIG_FILE=/app/config.yaml
 
 # Expose the port
-EXPOSE 8080
+EXPOSE 1414
 
-# Start the server
-CMD ["./main", "serve"]
+CMD ["/bin/bash", "-c", "/bin/sleep 10 && ./main serve"]

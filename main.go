@@ -73,6 +73,17 @@ func main() {
 }
 
 func initConfig() {
+	fmt.Println(os.Getenv("CONFIG_FILE"))
+	// If a CONFIG_FILE environment variable is set, read configuration from that file
+	if configPath := os.Getenv("CONFIG_FILE"); configPath != "" {
+		viper.SetConfigFile(configPath)
+
+		if err := viper.ReadInConfig(); err != nil {
+			fmt.Printf("Failed to read configuration file %s: %v\n", configPath, err)
+			os.Exit(1)
+		}
+	}
+
 	// Set default values for configuration properties
 	viper.SetDefault("server.port", "8080")
 	viper.SetDefault("db.host", "localhost")
@@ -98,16 +109,6 @@ func initConfig() {
 
 	// Bind environment variables to configuration properties
 	viper.AutomaticEnv()
-
-	// If a CONFIG_FILE environment variable is set, read configuration from that file
-	if configPath := os.Getenv("CONFIG_FILE"); configPath != "" {
-		viper.SetConfigFile(configPath)
-
-		if err := viper.ReadInConfig(); err != nil {
-			fmt.Printf("Failed to read configuration file %s: %v\n", configPath, err)
-			os.Exit(1)
-		}
-	}
 
 	// Print the final configuration
 	fmt.Println("Using the following configuration:")
