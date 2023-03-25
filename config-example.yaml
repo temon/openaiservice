@@ -1,0 +1,16 @@
+server:
+  port: 1414
+
+database:
+  host: localhost
+  port: 5432
+  user: postgres
+  password: password
+  dbname: mydb
+
+openai:
+  url: https://api.openai.com/v1/chat/completions
+  model: gpt-3.5-turbo
+  api_key: api_key
+  org_key: org_key
+  max_token: 100

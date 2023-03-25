@@ -1,0 +1,23 @@
+version: "3.9"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "1414:1414"
+    environment:
+      - CONFIG_FILE=/app/config.yaml
+    depends_on:
+      - db
+  db:
+    ports:
+      - "5432:5432"
+    image: postgres:13.3-alpine
+    environment:
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "password"
+      POSTGRES_DB: "mydb"
+    volumes:
+      - ./data:/var/lib/postgresql/data
