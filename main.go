@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/spf13/viper"
 	"gorm.io/driver/postgres"
@@ -46,7 +47,10 @@ func main() {
 		keyword := args[2]
 
 		// Call OpenAI API and log the request
-		response, err := callOpenAIAndLog(keyword)
+		requestId := uuid.New()
+
+		// Print the UUID
+		response, err := callOpenAIAndLog(keyword, requestId.String())
 		if err != nil {
 			fmt.Printf("Failed to call OpenAI API: %v\n", err)
 			return
@@ -169,6 +173,7 @@ type RequestBody struct {
 	Model       string    `json:"model"`
 	Messages    []Message `json:"messages"`
 	Temperature float32   `json:"temperature"`
+	MaxTokens   int       `json:"max_tokens"`
 }
 
 type Message struct {
@@ -176,26 +181,37 @@ type Message struct {
 	Content string `json:"content"`
 }
 
-func callOpenAIAndLog(keyword string) ([]byte, error) {
+func callOpenAIAndLog(keyword string, requestId string) ([]byte, error) {
 	start := time.Now()
+
+	if requestId == "" {
+		requestId = uuid.New().String()
+	}
 
 	// Load OpenAI API configuration from Viper configuration
 	openaiUrl := viper.GetString("openai.url")
 	openaiModel := viper.GetString("openai.model")
 	openaiApiKey := viper.GetString("openai.api_key")
 	orgApiKey := viper.GetString("openai.org_key")
-	//openaiMaxToken := viper.GetInt("openai.max_token")
+	openaiSystem := viper.GetString("openai.system")
+	openaiTemp := viper.GetFloat64("openai.temp")
+	openaiMaxToken := viper.GetInt("openai.max_token")
 
 	// Construct the request body
 	requestBody := RequestBody{
 		Model: openaiModel,
 		Messages: []Message{
 			{
+				Role:    "system",
+				Content: openaiSystem,
+			},
+			{
 				Role:    "user",
 				Content: keyword,
 			},
 		},
-		Temperature: 0.7,
+		MaxTokens:   openaiMaxToken,
+		Temperature: float32(openaiTemp),
 	}
 
 	requestBodyJSON, err := json.Marshal(requestBody)
@@ -250,6 +266,7 @@ func callOpenAIAndLog(keyword string) ([]byte, error) {
 		time.Now(),
 		req.ContentLength,
 		resp.ContentLength,
+		requestId,
 	)
 	if err != nil {
 		return nil, err
@@ -258,7 +275,7 @@ func callOpenAIAndLog(keyword string) ([]byte, error) {
 	return responseBody, nil
 }
 
-func logRequest(httpMethod string, requestUrl string, requestBody string, requestHeaders string, responseHeaders string, responseBody string, statusCode int, errorMessage string, userAgent string, ipAddress string, duration time.Duration, requestTimestamp time.Time, responseTimestamp time.Time, requestSize int64, responseSize int64) error {
+func logRequest(httpMethod string, requestUrl string, requestBody string, requestHeaders string, responseHeaders string, responseBody string, statusCode int, errorMessage string, userAgent string, ipAddress string, duration time.Duration, requestTimestamp time.Time, responseTimestamp time.Time, requestSize int64, responseSize int64, requestId string) error {
 	// Create a new Log struct with the provided data
 	log := Log{
 		HttpMethod:        httpMethod,
@@ -276,6 +293,7 @@ func logRequest(httpMethod string, requestUrl string, requestBody string, reques
 		ResponseTimestamp: responseTimestamp,
 		RequestSize:       requestSize,
 		ResponseSize:      responseSize,
+		RequestId:         requestId,
 	}
 
 	// Save the Log struct to the database
@@ -290,9 +308,10 @@ func logRequest(httpMethod string, requestUrl string, requestBody string, reques
 func openAIHandler(w http.ResponseWriter, r *http.Request) {
 	// Parse the keyword from the request query string
 	keyword := r.URL.Query().Get("keyword")
+	requestId := r.URL.Query().Get("requestId")
 	fmt.Printf("Call openai, keyword:%s\n", keyword)
 	// Call the callOpenAIAndLog function with the keyword
-	response, err := callOpenAIAndLog(keyword)
+	response, err := callOpenAIAndLog(keyword, requestId)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

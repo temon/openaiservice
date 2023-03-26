@@ -23,6 +23,7 @@ type Log struct {
 	ResponseTimestamp time.Time
 	RequestSize       int64
 	ResponseSize      int64
+	RequestId         string
 }
 
 func (Log) TableName() string {
